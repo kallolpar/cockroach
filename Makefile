@@ -206,6 +206,10 @@ clean:
 protobuf:
 	$(MAKE) -C .. -f cockroach/build/protobuf.mk
 
+.PHONY: clusterctl
+clusterctl:
+	$(GO) build $(GOFLAGS) -v -i -o clusterctl ./cloud/gce/allocatortest/clusterctl
+
 # The .go-version target is phony so that it is rebuilt every time.
 .PHONY: .go-version
 .go-version:

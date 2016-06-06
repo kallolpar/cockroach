@@ -16,7 +16,7 @@ TestTimeutil() {
 
 TestEnvutil() {
   echo "checking for os.Getenv calls (use envutil.EnvOrDefault*() instead)"
-  ! git grep -nF 'os.Getenv' -- '*.go' | grep -vE '^((util/(log|envutil|sdnotify))|acceptance(/.*)?)/\w+\.go\b'
+  ! git grep -nF 'os.Getenv' -- '*.go' | grep -vE '^((util/(log|envutil|sdnotify))|cloud/gce/allocatortest/clusterctl|acceptance(/.*)?)/\w+\.go\b'
 }
 
 TestProtoClone() {

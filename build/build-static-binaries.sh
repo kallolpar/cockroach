@@ -11,16 +11,19 @@ time make STATIC=1 build
 time make STATIC=1 testbuild PKG=./sql
 time make STATIC=1 testbuild PKG=./acceptance TAGS=acceptance
 time make STATIC=1 testbuildall DIR=${test_build_dir}
+time make STATIC=1 clusterctl
 
 # We don't check all test binaries, but one from each invocation.
 check_static cockroach
 check_static sql/sql.test
 check_static acceptance/acceptance.test
 check_static ${test_build_dir}/github.com/cockroachdb/cockroach/sql/sql.test
+check_static ${test_build_dir}/github.com/cockroachdb/cockroach/cloud/gce/allocatortest/clusterctl/clusterctl
 
 strip -S cockroach
 strip -S sql/sql.test
 strip -S acceptance/acceptance.test
+strip -S clusterctl
 
 rm -f static-tests.tar.gz
 # Skip the project/repo part of the path inside the tarball.

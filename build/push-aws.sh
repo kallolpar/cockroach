@@ -23,6 +23,7 @@ SHA="${CIRCLE_SHA1-$(git rev-parse HEAD)}"
 ./push-one-binary.sh ${SHA} sql/sql.test
 ./push-one-binary.sh ${SHA} acceptance/acceptance.test
 ./push-one-binary.sh ${SHA} static-tests.tar.gz
+./push-one-binary.sh ${SHA} clusterctl
 
 # TODO(marc): use these instead of the above "Linux binaries", this requires
 # fixing the callers.
