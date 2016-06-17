@@ -45,7 +45,6 @@ func SetupMultinodeTestCluster(t testing.TB, nodes int, name string) ([]*gosql.D
 		t.Fatal("invalid cluster size: ", nodes)
 	}
 	var servers []server.TestServer
-	fmt.Println("Starting first server")
 	first := server.StartTestServer(t)
 	servers = append(servers, first)
 	for i := 1; i < nodes; i++ {
@@ -56,7 +55,6 @@ func SetupMultinodeTestCluster(t testing.TB, nodes int, name string) ([]*gosql.D
 	var conns []*gosql.DB
 	var closes []func() error
 	var cleanups []func()
-	fmt.Println("Creating cleanup functions and opening connections")
 	for i, s := range servers {
 		pgURL, cleanupFn := sqlutils.PGUrl(t, s.ServingAddr(), security.RootUser,
 			fmt.Sprintf("node%d", i))
@@ -69,7 +67,6 @@ func SetupMultinodeTestCluster(t testing.TB, nodes int, name string) ([]*gosql.D
 		cleanups = append(cleanups, cleanupFn)
 		conns = append(conns, db)
 	}
-	fmt.Println("Creating database for server 1")
 	if _, err := conns[0].Exec(fmt.Sprintf(`CREATE DATABASE %s`, name)); err != nil {
 		t.Fatal(err)
 	}
@@ -89,13 +86,10 @@ func SetupMultinodeTestCluster(t testing.TB, nodes int, name string) ([]*gosql.D
 	if _, err := conns[0].Exec(`CREATE TABLE testing (k INT PRIMARY KEY, v INT)`); err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("before wait")
 	waitForReplication(servers)
-	fmt.Println("after wait")
 	if err := servers[0].DB().Put("aa", "bb"); err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println("after put")
 	return conns, f
 }
 
@@ -119,10 +113,6 @@ func waitForReplication(servers []server.TestServer) {
 		}
 		time.Sleep(250 * time.Millisecond)
 	}
-	for i, server := range servers {
-		store, _ := server.Stores().GetStore(roachpb.StoreID(i + 1))
-		fmt.Printf("server %d has %d replicas\n", i, store.ReplicaCount())
-	}
 }
 
 // NB(davidt): until `SetupMultinodeTestCluster` actually returns a cluster
@@ -132,29 +122,23 @@ func TestMultinodeCockroach(t *testing.T) {
 	defer leaktest.AfterTest(t)()
 	defer tracing.Disable()()
 	conns, cleanup := SetupMultinodeTestCluster(t, 3, "Testing")
-	fmt.Println("1")
 	defer cleanup()
-	fmt.Println("2")
 	if _, err := conns[0].Exec(`INSERT INTO testing VALUES (5, 1), (4, 2), (1, 2)`); err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("3")
 	if r, err := conns[1].Query(`SELECT * FROM testing WHERE k = 5`); err != nil {
 		t.Fatal(err)
 	} else if !r.Next() {
 		t.Fatal("no rows")
 	}
-	fmt.Println("4")
 	if r, err := conns[1].Query(`SELECT * FROM testing WHERE k = 5`); err != nil {
 		t.Fatal(err)
 	} else if !r.Next() {
 		t.Fatal("no rows")
 	}
-	fmt.Println("5")
 	for i := 0; i < 1000; i++ {
 		conns[0].Exec(fmt.Sprintf("INSERT INTO testing VALUES (%d, %d)", i, i+1))
 	}
-	fmt.Println("6")
 	if r, err := conns[2].Exec(`DELETE FROM testing`); err != nil {
 		t.Fatal(err)
 	} else if rows, err := r.RowsAffected(); err != nil {

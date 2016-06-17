@@ -229,13 +229,9 @@ func (db *DB) GetProto(key interface{}, msg proto.Message) error {
 // key can be either a byte slice or a string. value can be any key type, a
 // proto.Message or any Go primitive type (bool, int, etc).
 func (db *DB) Put(key, value interface{}) error {
-	fmt.Println("e")
 	b := db.NewBatch()
-	fmt.Println("f")
 	b.Put(key, value)
-	fmt.Println("g")
 	_, err := runOneResult(db, b)
-	fmt.Println("h")
 	return err
 }
 
@@ -395,40 +391,30 @@ func sendAndFill(
 	// fails. But send() also returns its own errors, so there's some dancing
 	// here to do because we want to run fillResults() so that the individual
 	// result gets initialized with an error from the corresponding call.
-	fmt.Println("e1")
 	var ba roachpb.BatchRequest
-	fmt.Println("e2")
 	// TODO(tschottdorf): this nonsensical copy is required since (at least at
 	// the time of writing, the chunking and masking in DistSender operates on
 	// the original data (as attested to by a whole bunch of test failures).
 	ba.Requests = append([]roachpb.RequestUnion(nil), b.reqs...)
-	fmt.Println("e3")
 	ba.Header = b.Header
-	fmt.Println("e4")
 	b.response, b.pErr = send(ba)
-	fmt.Println("e5")
 	if b.pErr != nil {
 		// Discard errors from fillResults.
 		_ = b.fillResults()
 		return b.pErr.GoError()
 	}
-	fmt.Println("e6")
 	if err := b.fillResults(); err != nil {
 		b.pErr = roachpb.NewError(err)
 		return err
 	}
-	fmt.Println("e7")
 	return nil
 }
 
 // Run implements Runner.Run(). See comments there.
 func (db *DB) Run(b *Batch) error {
-	fmt.Println("c1")
 	if err := b.prepare(); err != nil {
-		fmt.Println("c2")
 		return err
 	}
-	fmt.Println("c3")
 	return sendAndFill(db.send, b)
 }
 
@@ -463,12 +449,9 @@ func (db *DB) Txn(retryable func(txn *Txn) error) error {
 // send runs the specified calls synchronously in a single batch and returns
 // any errors. Returns (nil, nil) for an empty batch.
 func (db *DB) send(ba roachpb.BatchRequest) (*roachpb.BatchResponse, *roachpb.Error) {
-	fmt.Println("f1")
 	if len(ba.Requests) == 0 {
-		fmt.Println("f2")
 		return nil, nil
 	}
-	fmt.Println("f3")
 	if ba.ReadConsistency == roachpb.INCONSISTENT {
 		for _, ru := range ba.Requests {
 			req := ru.GetInner()
@@ -478,25 +461,20 @@ func (db *DB) send(ba roachpb.BatchRequest) (*roachpb.BatchResponse, *roachpb.Er
 			}
 		}
 	}
-	fmt.Println("f4")
 
 	if db.ctx.UserPriority != 1 {
 		ba.UserPriority = db.ctx.UserPriority
 	}
 
-	fmt.Println("f5")
-
 	tracing.AnnotateTrace()
-	fmt.Println("f6")
+
 	br, pErr := db.sender.Send(context.TODO(), ba)
-	fmt.Println("f7")
 	if pErr != nil {
 		if log.V(1) {
 			log.Infof("failed batch: %s", pErr)
 		}
 		return nil, pErr
 	}
-	fmt.Println("f8")
 	return br, nil
 }
 
@@ -517,23 +495,16 @@ type Runner interface {
 }
 
 func runOneResult(r Runner, b *Batch) (Result, error) {
-	fmt.Println("10")
 	if err := r.Run(b); err != nil {
-		fmt.Println("a1")
 		if len(b.Results) > 0 {
-			fmt.Println("a2")
 			return b.Results[0], b.Results[0].Err
 		}
-		fmt.Println("a3")
 		return Result{Err: err}, err
 	}
-	fmt.Println("11")
 	res := b.Results[0]
-	fmt.Println("12")
 	if res.Err != nil {
 		panic("r.Run() succeeded even through the result has an error")
 	}
-	fmt.Println("13")
 	return res, nil
 }
 

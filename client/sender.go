@@ -17,8 +17,6 @@
 package client
 
 import (
-	"fmt"
-
 	"golang.org/x/net/context"
 
 	"github.com/cockroachdb/cockroach/roachpb"
@@ -36,7 +34,6 @@ type SenderFunc func(context.Context, roachpb.BatchRequest) (*roachpb.BatchRespo
 
 // Send calls f(ctx, c).
 func (f SenderFunc) Send(ctx context.Context, ba roachpb.BatchRequest) (*roachpb.BatchResponse, *roachpb.Error) {
-	fmt.Println("g1")
 	return f(ctx, ba)
 }
 
