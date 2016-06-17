@@ -70,7 +70,7 @@ const (
 	// their config maps. Even if config maps do not expire, we still
 	// need a periodic gossip to safeguard against failure of a leader
 	// to gossip after performing an update to the map.
-	configGossipInterval = 1 * time.Second
+	configGossipInterval = 1 * time.Minute
 	// optimizePutThreshold is the minimum length of a contiguous run
 	// of batched puts or conditional puts, after which the constituent
 	// put operations will possibly be optimized by determining whether

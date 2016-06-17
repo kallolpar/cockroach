@@ -48,7 +48,6 @@ func SetupMultinodeTestCluster(t testing.TB, nodes int, name string) ([]*gosql.D
 	first := server.StartTestServer(t)
 	servers = append(servers, first)
 	for i := 1; i < nodes; i++ {
-		fmt.Printf("Starting %d server\n", i+1)
 		servers = append(servers, server.StartTestServerJoining(t, first))
 	}
 
@@ -82,18 +81,13 @@ func SetupMultinodeTestCluster(t testing.TB, nodes int, name string) ([]*gosql.D
 			fn()
 		}
 	}
-
-	if _, err := conns[0].Exec(`CREATE TABLE testing (k INT PRIMARY KEY, v INT)`); err != nil {
-		t.Fatal(err)
-	}
+	oldTime := time.Now()
 	waitForReplication(servers)
-	if err := servers[0].DB().Put("aa", "bb"); err != nil {
-		fmt.Println(err)
-	}
+	fmt.Printf("replication time: %s", time.Since(oldTime))
 	return conns, f
 }
 
-// Waits until all of the nodes have the same number of replicas.
+// Waits until at least one of the joining nodes has at least one replication.
 // NOTE: the StoreID of each server's store must be the index of the server in
 // the servers array + 1. This will occur naturally if servers are indexed in
 // the order they were created. 1
@@ -123,6 +117,9 @@ func TestMultinodeCockroach(t *testing.T) {
 	defer tracing.Disable()()
 	conns, cleanup := SetupMultinodeTestCluster(t, 3, "Testing")
 	defer cleanup()
+	if _, err := conns[0].Exec(`CREATE TABLE testing (k INT PRIMARY KEY, v INT)`); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := conns[0].Exec(`INSERT INTO testing VALUES (5, 1), (4, 2), (1, 2)`); err != nil {
 		t.Fatal(err)
 	}
