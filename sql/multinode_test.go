@@ -54,6 +54,7 @@ func SetupMultinodeTestCluster(t testing.TB, nodes int, name string) ([]*gosql.D
 	var conns []*gosql.DB
 	var closes []func() error
 	var cleanups []func()
+
 	for i, s := range servers {
 		pgURL, cleanupFn := sqlutils.PGUrl(t, s.ServingAddr(), security.RootUser,
 			fmt.Sprintf("node%d", i))
@@ -66,6 +67,7 @@ func SetupMultinodeTestCluster(t testing.TB, nodes int, name string) ([]*gosql.D
 		cleanups = append(cleanups, cleanupFn)
 		conns = append(conns, db)
 	}
+
 	if _, err := conns[0].Exec(fmt.Sprintf(`CREATE DATABASE %s`, name)); err != nil {
 		t.Fatal(err)
 	}
@@ -81,9 +83,8 @@ func SetupMultinodeTestCluster(t testing.TB, nodes int, name string) ([]*gosql.D
 			fn()
 		}
 	}
-	oldTime := time.Now()
+
 	waitForReplication(servers)
-	fmt.Printf("replication time: %s", time.Since(oldTime))
 	return conns, f
 }
 
@@ -115,32 +116,30 @@ func waitForReplication(servers []server.TestServer) {
 func TestMultinodeCockroach(t *testing.T) {
 	defer leaktest.AfterTest(t)()
 	defer tracing.Disable()()
+
 	conns, cleanup := SetupMultinodeTestCluster(t, 3, "Testing")
 	defer cleanup()
+
+	// This command will hang because it takes 1 min before any sql statements can be executed.
 	if _, err := conns[0].Exec(`CREATE TABLE testing (k INT PRIMARY KEY, v INT)`); err != nil {
 		t.Fatal(err)
 	}
+
 	if _, err := conns[0].Exec(`INSERT INTO testing VALUES (5, 1), (4, 2), (1, 2)`); err != nil {
 		t.Fatal(err)
 	}
+
 	if r, err := conns[1].Query(`SELECT * FROM testing WHERE k = 5`); err != nil {
 		t.Fatal(err)
 	} else if !r.Next() {
 		t.Fatal("no rows")
 	}
-	if r, err := conns[1].Query(`SELECT * FROM testing WHERE k = 5`); err != nil {
-		t.Fatal(err)
-	} else if !r.Next() {
-		t.Fatal("no rows")
-	}
-	for i := 0; i < 1000; i++ {
-		conns[0].Exec(fmt.Sprintf("INSERT INTO testing VALUES (%d, %d)", i, i+1))
-	}
+
 	if r, err := conns[2].Exec(`DELETE FROM testing`); err != nil {
 		t.Fatal(err)
 	} else if rows, err := r.RowsAffected(); err != nil {
 		t.Fatal(err)
-	} else if expected, actual := int64(1000), rows; expected != actual {
+	} else if expected, actual := int64(3), rows; expected != actual {
 		t.Fatalf("wrong row count deleted: expected %d actual %d", expected, actual)
 	}
 }
